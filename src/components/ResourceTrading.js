@@ -1,139 +1,135 @@
-import React, { useState, useEffect } from 'react';
-import { collection, addDoc, onSnapshot, query } from 'firebase/firestore';
-import { firestore } from '../firebase';
+import React, { useState } from 'react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { firestore } from '../firebase'; // Firebase configuration file
 import { useNavigate } from 'react-router-dom';
 
-function ResourceTrading({ user }) {
-  const [resources, setResources] = useState([]);
-  const [newResource, setNewResource] = useState({
-    name: '',
-    quantity: 0,
-    description: ''
-  });
-  const [loading, setLoading] = useState(true);
+function TradingResource() {
+  const [resourceType, setResourceType] = useState('');
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [units, setUnits] = useState(''); // Units of the resource
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
   const navigate = useNavigate();
 
-  // Fetch resources in real-time from Firestore
-  useEffect(() => {
-    const resourcesQuery = query(collection(firestore, 'resources'));
+  // Resource types available
+  const resourceTypes = [
+    'Food Supplies',
+    'Purified Water',
+    'Ammunition',
+    'Medical Supplies',
+    'Repair Components',
+    'Survival Gear',
+  ];
 
-    const unsubscribe = onSnapshot(
-      resourcesQuery,
-      (snapshot) => {
-        const resourceList = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setResources(resourceList);  // Update state with fetched resources
-        setLoading(false);  // Stop loading spinner
-      },
-      (error) => {
-        console.error('Error fetching resources:', error);  // Log errors
-        setLoading(false);  // Stop loading on error
-        alert('Error loading resources');
-      }
-    );
-
-    return () => unsubscribe();  // Cleanup listener on unmount
-  }, []);
-
-  // Add a new resource to Firestore
-  const addResource = async (e) => {
-    e.preventDefault();
-
-    if (newResource.quantity <= 0) {
-      alert('Quantity must be greater than 0');
+  // Add resource to Firestore
+  const handleListResource = async () => {
+    if (!resourceType || !name || !description || !units) {
+      setErrorMessage('All fields are required!');
       return;
     }
-
     try {
-      const docRef = await addDoc(collection(firestore, 'resources'), {
-        ...newResource,
-        traderEmail: user.email,
-        status: 'pending',
-        timestamp: new Date(),
+      await addDoc(collection(firestore, 'tradeableResources'), {
+        type: resourceType,
+        name: name,
+        description: description,
+        units: units,
+        status: 'Pending', // Default trade status
+        timestamp: serverTimestamp(),
       });
-
-      // Optimistically update state with the new resource
-      setResources((prevResources) => [
-        ...prevResources,
-        {
-          id: docRef.id,
-          ...newResource,
-          traderEmail: user.email,
-          status: 'pending',
-          timestamp: new Date(),
-        }
-      ]);
-
-      // Clear the form
-      setNewResource({ name: '', quantity: 0, description: '' });
+      setSuccessMessage('Resource listed successfully!');
+      setErrorMessage('');
+      setResourceType('');
+      setName('');
+      setDescription('');
+      setUnits('');
     } catch (error) {
       console.error('Error adding resource:', error);
-      alert('Error adding resource');
+      setErrorMessage('Failed to list resource. Check Firestore configuration and rules.');
     }
   };
 
   return (
-    <div>
-      <h2>Resource Trading</h2>
-      
-      {/* Form to add a new resource */}
-      <form onSubmit={addResource}>
-        <input
-          type="text"
-          value={newResource.name}
-          onChange={(e) => setNewResource({ ...newResource, name: e.target.value })}
-          placeholder="Resource Name"
-          required
-        />
-        <input
-          type="number"
-          value={newResource.quantity}
-          onChange={(e) => setNewResource({ ...newResource, quantity: parseInt(e.target.value) })}
-          placeholder="Quantity"
-          required
-        />
-        <textarea
-          value={newResource.description}
-          onChange={(e) => setNewResource({ ...newResource, description: e.target.value })}
-          placeholder="Description"
-          required
-        />
-        <button
-          type="submit"
-          disabled={!newResource.name || !newResource.description || newResource.quantity <= 0}
-        >
-          List Resource
-        </button>
-      </form>
+    <div style={{ padding: '20px' }}>
+      <h2>Tradeable Resources</h2>
+      <p>Add a resource to the list for trading.</p>
 
-      {/* Display resources or loading state */}
-      {loading ? (
-        <p>Loading resources...</p>
-      ) : resources.length === 0 ? (
-        <p>No resources available</p>
-      ) : (
-        <div>
-          <h3>Available Resources</h3>
-          {resources.map((resource) => (
-            <div key={resource.id} style={{ marginBottom: '20px' }}>
-              <h4>{resource.name}</h4>
-              <p>Quantity: {resource.quantity}</p>
-              <p>{resource.description}</p>
-              <p>Trader: {resource.traderEmail}</p>
+      {/* Resource Type Dropdown */}
+      <div style={{ marginBottom: '20px' }}>
+        <label>
+          Resource Type:
+          <select
+            value={resourceType}
+            onChange={(e) => setResourceType(e.target.value)}
+            style={{ marginLeft: '10px' }}
+          >
+            <option value="">Select Resource Type</option>
+            {resourceTypes.map((type, index) => (
+              <option key={index} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-              {resource.status === 'pending' && (
-                <button onClick={() => navigate(`/trade/${resource.id}`)}>
-                  Request Trade
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Resource Name Input */}
+      <div style={{ marginBottom: '20px' }}>
+        <label>
+          Resource Name:
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter resource name"
+            style={{ marginLeft: '10px', width: '200px' }}
+          />
+        </label>
+      </div>
+
+      {/* Resource Description Input */}
+      <div style={{ marginBottom: '20px' }}>
+        <label>
+          Resource Description:
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Enter resource description"
+            style={{ marginLeft: '10px', width: '300px', height: '80px' }}
+          />
+        </label>
+      </div>
+
+      {/* Units Input */}
+      <div style={{ marginBottom: '20px' }}>
+        <label>
+          Units:
+          <input
+            type="text"
+            value={units}
+            onChange={(e) => setUnits(e.target.value)}
+            placeholder="Enter units (e.g., 10 kg)"
+            style={{ marginLeft: '10px', width: '200px' }}
+          />
+        </label>
+      </div>
+
+      {/* Submit Button */}
+      <button onClick={handleListResource} style={{ padding: '10px 20px' }}>
+        List Resource
+      </button>
+
+      {/* Success and Error Messages */}
+      {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
+      {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+
+      {/* View Available Resources Button */}
+      <button onClick={() => navigate('/available-resources')} style={{ marginTop: '20px' }}>
+        View Available Resources
+      </button>
     </div>
   );
 }
 
-export default ResourceTrading;
+export default TradingResource;
