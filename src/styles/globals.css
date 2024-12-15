@@ -1,7 +1,7 @@
-/* Vault-Tec Terminal Theme */
+/* Vault-Net Terminal Theme */
 :root {
   --primary: #00FF00;  /* Classic green terminal color */
-  --secondary: #FFB000; /* Vault-Tec gold */
+  --secondary: #FFB000; /* Vault-Net gold */
   --background: #0A0A0A;
   --text: var(--primary);
 }

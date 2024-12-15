@@ -19,7 +19,7 @@ function Layout({ user, children }) {
     <div className="terminal-layout">
       <nav className="terminal-nav">
         <div className="nav-header">
-          <div className="terminal-title">VAULT-TEC TERMINAL</div>
+          <div className="terminal-title">VAULT-NET TERMINAL</div>
           {user && (
             <div className="user-info">
               LOGGED IN AS: {user.username ? user.username : user.email}
