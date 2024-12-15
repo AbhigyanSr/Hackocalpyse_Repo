@@ -5,11 +5,16 @@ import {
   onSnapshot,
   query,
   orderBy,
+  serverTimestamp,
 } from "firebase/firestore";
 import { firestore } from "../firebase";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase"; // Import Firebase auth for logout
 import { useNavigate } from "react-router-dom";
+import { io } from 'socket.io-client';
+
+// Connect to Socket.io server
+const socket = io('http://localhost:5000'); // Assuming backend is running on localhost
 
 function AdminDashboard() {
   const [criticalAlerts, setCriticalAlerts] = useState([]);
@@ -52,7 +57,7 @@ function AdminDashboard() {
       try {
         await addDoc(collection(firestore, "criticalAlerts"), {
           message: newAlert,
-          timestamp: new Date(),
+          timestamp: serverTimestamp(), // Use server timestamp for consistency
           severity: severity, // Store the severity value (1, 2, or 3)
         });
         setNewAlert("");
@@ -63,9 +68,18 @@ function AdminDashboard() {
     }
   };
 
+  // Function to share alert to social media via Socket.io
+  const shareAlert = (alert) => {
+    // Emit shareAlert event to backend via Socket.io
+    socket.emit('shareAlert', alert);
+  };
+
   // Formatting the timestamp to a readable format
   const formattedTimestamp = (timestamp) => {
-    return new Date(timestamp.seconds * 1000).toLocaleString();
+    if (timestamp && timestamp.seconds) {
+      return new Date(timestamp.seconds * 1000).toLocaleString();
+    }
+    return "Unknown time";
   };
 
   // Logout functionality
@@ -94,8 +108,6 @@ function AdminDashboard() {
 
   return (
     <div className="terminal-dashboard">
-      {/* Navbar */}
-
       <h2 className="dashboard-title">ADMIN DASHBOARD</h2>
 
       {/* New Alert Section */}
@@ -149,6 +161,10 @@ function AdminDashboard() {
               <div className="alert-timestamp">
                 {formattedTimestamp(alert.timestamp)}
               </div>
+              {/* Share Button */}
+              <button onClick={() => shareAlert(alert)} className="share-button">
+                Share Alert
+              </button>
             </div>
           ))
         )}
